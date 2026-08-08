@@ -1,0 +1,41 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "avldb"
+version = "0.1.0"
+description = "A typed, embedded document database with Rust-backed AVL indexes"
+readme = "README.md"
+requires-python = ">=3.10"
+license = "Apache-2.0 OR GPL-3.0-only"
+license-files = ["LICENSE-APACHE", "LICENSE-GPL"]
+authors = [
+  { name = "Anuradha Wickramarachchi", email = "anuradhawick@gmail.com" },
+]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: Implementation :: CPython",
+  "Typing :: Typed",
+]
+dependencies = [
+  "pydantic>=2,<3",
+  "rs-avl>=0.1.1,<0.2",
+]
+
+[dependency-groups]
+dev = ["pytest>=8,<10"]
+
+[project.urls]
+Documentation = "https://github.com/anuradhawick/avldb#readme"
+Issues = "https://github.com/anuradhawick/avldb/issues"
+Repository = "https://github.com/anuradhawick/avldb"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/avldb"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"

@@ -1,4 +1,4 @@
-# avldb
+# AVL-DB
 
 [![PyPI](https://img.shields.io/pypi/v/avldb.svg)](https://pypi.org/project/avldb/)
 [![Python versions](https://img.shields.io/pypi/pyversions/avldb.svg)](https://pypi.org/project/avldb/)

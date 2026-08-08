@@ -28,11 +28,17 @@ def test_sparse_multikey_nested_and_intersected_indexes() -> None:
     db.ensure_index("flags")
     db.ensure_index("nested.rank")
 
-    assert [item.score for item in db.find({"group": "a", "score": {"$gte": 3}}).all()] == [5]
+    assert [
+        item.score for item in db.find({"group": "a", "score": {"$gte": 3}}).all()
+    ] == [5]
     assert {item.score for item in db.find({"flags": "red"}).all()} == {1, 8}
     assert [item.score for item in db.find({"nested.rank": {"$lt": 2}}).all()] == [8]
-    assert {item.score for item in db.find({"$or": [{"score": 1}, {"score": 8}]}).all()} == {1, 8}
-    assert {item.score for item in db.find({"group": {"$in": [re.compile("^a$")]}}).all()} == {1, 5}
+    assert {
+        item.score for item in db.find({"$or": [{"score": 1}, {"score": 8}]}).all()
+    } == {1, 8}
+    assert {
+        item.score for item in db.find({"group": {"$in": [re.compile("^a$")]}}).all()
+    } == {1, 5}
 
 
 def test_bool_and_number_are_distinct_index_keys() -> None:

@@ -9,7 +9,7 @@ description = "A typed, embedded document database with Rust-backed AVL indexes"
 readme = "README.md"
 requires-python = ">=3.10"
 license = "Apache-2.0 OR GPL-3.0-only"
-license-files = ["LICENSE-APACHE", "LICENSE-GPL"]
+license-files = ["LICENSE", "LICENSE-APACHE", "LICENSE-GPL"]
 authors = [
   { name = "Anuradha Wickramarachchi", email = "anuradhawick@gmail.com" },
 ]

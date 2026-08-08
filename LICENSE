@@ -1,0 +1,17 @@
+Copyright 2026 Anuradha Wickramarachchi
+
+AVLDB is dual-licensed. You may use, modify, and distribute this software under
+either of the following licenses, at your option:
+
+1. Apache License, Version 2.0 (Apache-2.0)
+   See LICENSE-APACHE for the complete license text.
+
+2. GNU General Public License, Version 3 only (GPL-3.0-only)
+   See LICENSE-GPL for the complete license text.
+
+The SPDX license expression for this choice is:
+
+    Apache-2.0 OR GPL-3.0-only
+
+Unless a file explicitly states otherwise, this licensing choice applies to
+all source code and documentation in this repository.

@@ -283,4 +283,13 @@ The benchmark compares repeated indexed queries with streaming scans over the
 same dataset. It contains no timing assertion because absolute performance is
 environment-dependent.
 
-Licensed under your choice of Apache-2.0 or GPL-3.0-only.
+## License
+
+Copyright 2026 Anuradha Wickramarachchi.
+
+AVLDB is available under your choice of the
+[Apache License 2.0](https://github.com/anuradhawick/avldb/blob/main/LICENSE-APACHE)
+or the
+[GNU General Public License v3.0 only](https://github.com/anuradhawick/avldb/blob/main/LICENSE-GPL).
+See the [dual-license notice](https://github.com/anuradhawick/avldb/blob/main/LICENSE)
+for details.

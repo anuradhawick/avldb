@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "avldb"
-version = "0.1.0"
+version = "0.1.1"
 description = "A typed, embedded document database with Rust-backed AVL indexes"
 readme = "README.md"
 requires-python = ">=3.10"

@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.1.1
+
+- Organize collection, indexing, and storage code into focused subpackages
+  while preserving the public `avldb` import API.
+- Document custom backend implementation and provide a typed, runnable
+  `rs-avl` backend example.
+- Add Black formatting checks and UV-based contributor instructions.
+- Include an explicit dual-license notice and both complete license texts in
+  source and wheel distributions.
+
 ## 0.1.0
 
 - Initial typed collection, NeDB-style query/update engine, AVL indexes, and

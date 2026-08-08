@@ -30,11 +30,19 @@ def values_equal(left: object, right: object) -> bool:
     if isinstance(left, (int, float)) and isinstance(right, (int, float)):
         return left == right
     if isinstance(left, datetime) or isinstance(right, datetime):
-        return isinstance(left, datetime) and isinstance(right, datetime) and normalize_key(left) == normalize_key(right)
+        return (
+            isinstance(left, datetime)
+            and isinstance(right, datetime)
+            and normalize_key(left) == normalize_key(right)
+        )
     if isinstance(left, Mapping) and isinstance(right, Mapping):
-        return set(left) == set(right) and all(values_equal(left[k], right[k]) for k in left)
+        return set(left) == set(right) and all(
+            values_equal(left[k], right[k]) for k in left
+        )
     if isinstance(left, (list, tuple)) and isinstance(right, (list, tuple)):
-        return len(left) == len(right) and all(values_equal(a, b) for a, b in zip(left, right))
+        return len(left) == len(right) and all(
+            values_equal(a, b) for a, b in zip(left, right)
+        )
     return type(left) is type(right) and left == right
 
 
@@ -74,7 +82,11 @@ def _match_operator(value: object, operator: str, operand: object) -> bool:
         if not isinstance(operand, (list, tuple)):
             raise QueryError(f"{operator} requires an array")
         found = any(
-            bool(item.search(value)) if isinstance(item, re.Pattern) and isinstance(value, str) else values_equal(value, item)
+            (
+                bool(item.search(value))
+                if isinstance(item, re.Pattern) and isinstance(value, str)
+                else values_equal(value, item)
+            )
             for item in operand
         )
         return found if operator == "$in" else not found
@@ -92,7 +104,11 @@ def _match_operator(value: object, operator: str, operand: object) -> bool:
         if not isinstance(value, (list, tuple)) or not isinstance(operand, Mapping):
             return False
         return any(
-            match_document(item, operand) if isinstance(item, Mapping) else _match_field(item, operand)
+            (
+                match_document(item, operand)
+                if isinstance(item, Mapping)
+                else _match_field(item, operand)
+            )
             for item in value
         )
     raise QueryError(f"unknown query operator {operator!r}")
@@ -118,9 +134,22 @@ def _match_field(value: object, condition: object) -> bool:
             # Negative operators must hold for the array as a whole; positive
             # operators match when any element satisfies the expression.
             if set(condition).issubset({"$ne", "$nin", "$exists"}):
-                return all(all(_match_operator(item, str(op), arg) for op, arg in condition.items()) for item in value)
-            return any(all(_match_operator(item, str(op), arg) for op, arg in condition.items()) for item in value)
-        return all(_match_operator(value, str(op), arg) for op, arg in condition.items())
+                return all(
+                    all(
+                        _match_operator(item, str(op), arg)
+                        for op, arg in condition.items()
+                    )
+                    for item in value
+                )
+            return any(
+                all(
+                    _match_operator(item, str(op), arg) for op, arg in condition.items()
+                )
+                for item in value
+            )
+        return all(
+            _match_operator(value, str(op), arg) for op, arg in condition.items()
+        )
 
     if isinstance(value, (list, tuple)):
         if isinstance(condition, (list, tuple)):
@@ -143,10 +172,14 @@ def match_document(document: object, query: Query) -> bool:
         return False
     for field, condition in query.items():
         if field == "$or" or field == "$and":
-            if not isinstance(condition, (list, tuple)) or not all(isinstance(item, Mapping) for item in condition):
+            if not isinstance(condition, (list, tuple)) or not all(
+                isinstance(item, Mapping) for item in condition
+            ):
                 raise QueryError(f"{field} requires an array of query mappings")
             matches = [match_document(document, item) for item in condition]
-            if (field == "$or" and not any(matches)) or (field == "$and" and not all(matches)):
+            if (field == "$or" and not any(matches)) or (
+                field == "$and" and not all(matches)
+            ):
                 return False
         elif field == "$not":
             if not isinstance(condition, Mapping):
@@ -165,7 +198,9 @@ def match_document(document: object, query: Query) -> bool:
     return True
 
 
-def apply_projection(document: Mapping[str, object], projection: Projection) -> dict[str, object]:
+def apply_projection(
+    document: Mapping[str, object], projection: Projection
+) -> dict[str, object]:
     """Create an inclusion or exclusion projection of a document.
 
     Inclusion and exclusion cannot be mixed except for ``_id``, mirroring the
@@ -174,8 +209,16 @@ def apply_projection(document: Mapping[str, object], projection: Projection) -> 
 
     if not projection:
         return deepcopy(dict(document))
-    include = {field for field, enabled in projection.items() if bool(enabled) and field != "_id"}
-    exclude = {field for field, enabled in projection.items() if not bool(enabled) and field != "_id"}
+    include = {
+        field
+        for field, enabled in projection.items()
+        if bool(enabled) and field != "_id"
+    }
+    exclude = {
+        field
+        for field, enabled in projection.items()
+        if not bool(enabled) and field != "_id"
+    }
     if include and exclude:
         raise QueryError("cannot mix inclusion and exclusion projection")
     id_only_inclusion = bool(projection.get("_id")) and not exclude and not include
@@ -196,7 +239,9 @@ def apply_projection(document: Mapping[str, object], projection: Projection) -> 
     return result
 
 
-def sort_documents(documents: list[dict[str, object]], spec: SortSpec) -> list[dict[str, object]]:
+def sort_documents(
+    documents: list[dict[str, object]], spec: SortSpec
+) -> list[dict[str, object]]:
     """Return documents sorted by each path and direction in specification order."""
 
     for direction in spec.values():
@@ -226,7 +271,9 @@ def _modifier_paths(value: object, operator: str) -> Mapping[str, object]:
     return value
 
 
-def apply_update(document: Mapping[str, object], update: Mapping[str, object]) -> dict[str, object]:
+def apply_update(
+    document: Mapping[str, object], update: Mapping[str, object]
+) -> dict[str, object]:
     """Apply a replacement or modifier update to a copied document.
 
     Supported scalar and array modifiers follow NeDB behavior. The caller must
@@ -264,15 +311,31 @@ def apply_update(document: Mapping[str, object], update: Mapping[str, object]) -
             for path, operand in changes.items():
                 current = get_path(result, path)
                 if operator == "$inc":
-                    if not isinstance(operand, (int, float)) or isinstance(operand, bool):
+                    if not isinstance(operand, (int, float)) or isinstance(
+                        operand, bool
+                    ):
                         raise QueryError("$inc operands must be numeric")
                     if current is MISSING:
                         set_path(result, path, operand)
-                    elif isinstance(current, (int, float)) and not isinstance(current, bool):
+                    elif isinstance(current, (int, float)) and not isinstance(
+                        current, bool
+                    ):
                         set_path(result, path, current + operand)
                     else:
                         raise QueryError("cannot apply $inc to a non-number")
-                elif current is MISSING or (comparable(current, operand) and ((operator == "$min" and normalize_key(operand) < normalize_key(current)) or (operator == "$max" and normalize_key(operand) > normalize_key(current)))):
+                elif current is MISSING or (
+                    comparable(current, operand)
+                    and (
+                        (
+                            operator == "$min"
+                            and normalize_key(operand) < normalize_key(current)
+                        )
+                        or (
+                            operator == "$max"
+                            and normalize_key(operand) > normalize_key(current)
+                        )
+                    )
+                ):
                     set_path(result, path, operand)
         elif operator in {"$push", "$addToSet", "$pop", "$pull"}:
             for path, operand in changes.items():
@@ -284,9 +347,13 @@ def apply_update(document: Mapping[str, object], update: Mapping[str, object]) -
                 if not isinstance(current, list):
                     raise QueryError(f"cannot apply {operator} to a non-array")
                 if operator == "$push":
-                    if isinstance(operand, Mapping) and ("$each" in operand or "$slice" in operand):
+                    if isinstance(operand, Mapping) and (
+                        "$each" in operand or "$slice" in operand
+                    ):
                         if set(operand) - {"$each", "$slice"}:
-                            raise QueryError("$push only supports $each and $slice options")
+                            raise QueryError(
+                                "$push only supports $each and $slice options"
+                            )
                         items = operand.get("$each", [])
                         if not isinstance(items, list):
                             raise QueryError("$each requires an array")
@@ -299,13 +366,23 @@ def apply_update(document: Mapping[str, object], update: Mapping[str, object]) -
                     else:
                         current.append(deepcopy(operand))
                 elif operator == "$addToSet":
-                    if isinstance(operand, Mapping) and "$each" in operand and set(operand) != {"$each"}:
+                    if (
+                        isinstance(operand, Mapping)
+                        and "$each" in operand
+                        and set(operand) != {"$each"}
+                    ):
                         raise QueryError("$addToSet only supports the $each option")
-                    items = operand.get("$each") if isinstance(operand, Mapping) and "$each" in operand else [operand]
+                    items = (
+                        operand.get("$each")
+                        if isinstance(operand, Mapping) and "$each" in operand
+                        else [operand]
+                    )
                     if not isinstance(items, list):
                         raise QueryError("$each requires an array")
                     for item in items:
-                        if not any(values_equal(item, existing) for existing in current):
+                        if not any(
+                            values_equal(item, existing) for existing in current
+                        ):
                             current.append(deepcopy(item))
                 elif operator == "$pop":
                     if operand not in (-1, 1):
@@ -313,7 +390,9 @@ def apply_update(document: Mapping[str, object], update: Mapping[str, object]) -
                     if current:
                         current.pop(0 if operand == -1 else -1)
                 else:
-                    current[:] = [item for item in current if not _match_field(item, operand)]
+                    current[:] = [
+                        item for item in current if not _match_field(item, operand)
+                    ]
         else:
             raise QueryError(f"unknown update operator {operator!r}")
     if result.get("_id") != old_id:

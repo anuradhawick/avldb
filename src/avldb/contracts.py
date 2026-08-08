@@ -77,7 +77,9 @@ class IndexLookup:
         return cls(values=values)
 
     @classmethod
-    def range(cls, *, lower: Bound | None = None, upper: Bound | None = None) -> "IndexLookup":
+    def range(
+        cls, *, lower: Bound | None = None, upper: Bound | None = None
+    ) -> "IndexLookup":
         """Create an ordered lookup between optional endpoints."""
 
         return cls(lower=lower, upper=upper)
@@ -104,4 +106,6 @@ class ChangeSet:
     def empty(self) -> bool:
         """Return whether this change set contains no mutations."""
 
-        return not (self.puts or self.deletes or self.create_indexes or self.drop_indexes)
+        return not (
+            self.puts or self.deletes or self.create_indexes or self.drop_indexes
+        )

@@ -10,7 +10,6 @@ import uuid
 
 from pydantic import BaseModel, ConfigDict, Field
 
-
 _UUID7_RANDOM_BITS = 74
 _UUID7_RANDOM_MASK = (1 << _UUID7_RANDOM_BITS) - 1
 _id_lock = threading.Lock()
@@ -74,7 +73,9 @@ class Document(BaseModel):
 
     model_config = ConfigDict(populate_by_name=True, extra="forbid")
 
-    avldb_id: str = Field(default_factory=new_document_id, alias="_id", frozen=True, repr=False)
+    avldb_id: str = Field(
+        default_factory=new_document_id, alias="_id", frozen=True, repr=False
+    )
 
     @property
     def _id(self) -> str:

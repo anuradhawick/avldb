@@ -26,7 +26,10 @@ dependencies = [
 ]
 
 [dependency-groups]
-dev = ["pytest>=8,<10"]
+dev = [
+  "black>=25.1,<27",
+  "pytest>=8,<10",
+]
 
 [project.urls]
 Documentation = "https://github.com/anuradhawick/avldb#readme"
@@ -39,3 +42,6 @@ packages = ["src/avldb"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-ra"
+
+[tool.black]
+target-version = ["py310"]

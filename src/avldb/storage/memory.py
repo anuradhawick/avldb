@@ -10,7 +10,14 @@ from typing import Iterable, Iterator, Mapping
 from ..contracts import ChangeSet, IndexLookup, IndexSpec
 from ..exceptions import BackendError, DuplicateKeyError, WriteConflictError
 from ..indexing.avl import Index
-from .base import BackendView, DocumentData, StorageBackend, _copy_document, _lookup_index
+from .base import (
+    BackendView,
+    DocumentData,
+    StorageBackend,
+    _copy_document,
+    _lookup_index,
+)
+
 
 @dataclass(frozen=True, slots=True)
 class _MemoryState:
@@ -80,7 +87,13 @@ class MemoryBackend(StorageBackend):
         """Create a closed backend with an empty initial state."""
 
         specs = {"_id": IndexSpec("_id", unique=True)}
-        self._state = _MemoryState(0, (), MappingProxyType({}), MappingProxyType(specs), MappingProxyType({"_id": Index(specs["_id"])}))
+        self._state = _MemoryState(
+            0,
+            (),
+            MappingProxyType({}),
+            MappingProxyType(specs),
+            MappingProxyType({"_id": Index(specs["_id"])}),
+        )
         self._opened = False
         self._closed = False
         self._lock = threading.RLock()
@@ -116,7 +129,10 @@ class MemoryBackend(StorageBackend):
             if changes.empty:
                 return base_revision
 
-            if any(not isinstance(document.get("_id"), str) or not document.get("_id") for document in changes.puts):
+            if any(
+                not isinstance(document.get("_id"), str) or not document.get("_id")
+                for document in changes.puts
+            ):
                 raise BackendError("stored documents require a non-empty string _id")
             put_ids = [str(document["_id"]) for document in changes.puts]
             if len(set(put_ids)) != len(put_ids):
@@ -148,7 +164,9 @@ class MemoryBackend(StorageBackend):
             for spec in changes.create_indexes:
                 existing = specs.get(spec.field)
                 if existing is not None and existing != spec:
-                    raise BackendError(f"index already exists with different options: {spec.field!r}")
+                    raise BackendError(
+                        f"index already exists with different options: {spec.field!r}"
+                    )
                 specs[spec.field] = spec
 
             live = [document for document in records if document is not None]
@@ -168,9 +186,18 @@ class MemoryBackend(StorageBackend):
 
         with self._lock:
             self._check_open()
-            live = tuple(_copy_document(document) for document in self._state.records if document is not None)
-            locations = {str(document["_id"]): slot for slot, document in enumerate(live)}
-            indexes = {field: Index.build(spec, live) for field, spec in self._state.specs.items()}
+            live = tuple(
+                _copy_document(document)
+                for document in self._state.records
+                if document is not None
+            )
+            locations = {
+                str(document["_id"]): slot for slot, document in enumerate(live)
+            }
+            indexes = {
+                field: Index.build(spec, live)
+                for field, spec in self._state.specs.items()
+            }
             revision = self._state.revision + 1
             self._state = _MemoryState(
                 revision,

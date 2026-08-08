@@ -24,4 +24,3 @@ def run(indexed: bool) -> float:
 
 if __name__ == "__main__":
     print({"scan_seconds": run(False), "indexed_seconds": run(True)})
-

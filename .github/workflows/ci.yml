@@ -6,6 +6,16 @@ on:
   workflow_call:
 
 jobs:
+  format:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v7
+        with:
+          python-version: "3.10"
+      - run: uv sync --locked
+      - run: uv run black --check src tests examples benchmarks
+
   test:
     strategy:
       fail-fast: false
@@ -19,3 +29,4 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - run: uv sync --locked
       - run: uv run pytest
+      - run: uv run python examples/custom_backend.py

@@ -44,7 +44,9 @@ class Index:
         unique: dict[tuple[object, ...], object] = {}
         for item in values:
             if isinstance(item, Mapping):
-                raise ValidationError(f"cannot index an object or array of objects on {self.spec.field!r}")
+                raise ValidationError(
+                    f"cannot index an object or array of objects on {self.spec.field!r}"
+                )
             key = normalize_key(item)
             unique[key] = item
         return list(unique.values())
@@ -118,7 +120,9 @@ class Index:
 
         start = None if lower is MISSING else normalize_key(lower)
         end = None if upper is MISSING else normalize_key(upper)
-        buckets = self._tree.range(start, end, include_start=include_lower, include_end=include_upper)
+        buckets = self._tree.range(
+            start, end, include_start=include_lower, include_end=include_upper
+        )
         result: set[str] = set()
         for bucket in buckets:
             result.update(bucket.ids)
@@ -147,7 +151,9 @@ class Index:
         return index
 
     @classmethod
-    def build(cls, spec: IndexSpec, documents: Iterable[Mapping[str, object]]) -> "Index":
+    def build(
+        cls, spec: IndexSpec, documents: Iterable[Mapping[str, object]]
+    ) -> "Index":
         """Build and validate a complete index from an iterable of documents."""
 
         index = cls(spec)

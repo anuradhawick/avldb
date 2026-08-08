@@ -206,6 +206,9 @@ can import the extension contract from `avldb.storage`.
 
 ## Implementing another backend
 
+See [Writing a custom backend](docs/custom-backends.md) for the contract,
+implementation rules, and a complete lock-free list backend you can run.
+
 Subclass `StorageBackend` and return a `BackendView` implementation. The shared
 backend conformance tests illustrate the required behavior. Important rules:
 
@@ -234,13 +237,46 @@ reopen, and compaction:
 uv run python examples/basic.py
 ```
 
-## Development and benchmarks
+## Development
+
+Install [UV](https://docs.astral.sh/uv/), clone the repository, and create the
+locked development environment:
 
 ```console
-uv sync
+git clone https://github.com/anuradhawick/avldb.git
+cd avldb
+uv sync --locked
+```
+
+Run the test suite and examples inside that environment:
+
+```console
 uv run pytest
-uv run python benchmarks/indexed_queries.py
+uv run python examples/basic.py
+uv run python examples/custom_backend.py
+```
+
+Format Python files with Black, or check formatting without changing files:
+
+```console
+uv run black src tests examples benchmarks
+uv run black --check src tests examples benchmarks
+```
+
+Build the same source and wheel artifacts used for publication:
+
+```console
 uv build --no-sources
+```
+
+CI checks Black formatting and runs the tests on every supported Python
+version. When dependencies change, run `uv lock` and commit the updated
+`uv.lock` file.
+
+## Benchmarks
+
+```console
+uv run python benchmarks/indexed_queries.py
 ```
 
 The benchmark compares repeated indexed queries with streaming scans over the

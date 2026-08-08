@@ -86,10 +86,16 @@ def demonstrate(products: Collection[Product]) -> None:
     )
     print("Affordable hardware:", [product.name for product in affordable_hardware])
 
-    featured = products.find({"tags": "featured"}, {"name": 1, "price": 1, "_id": 0}).all()
+    featured = products.find(
+        {"tags": "featured"}, {"name": 1, "price": 1, "_id": 0}
+    ).all()
     print("Featured projection:", featured)
 
-    highly_rated = products.find({"details.rating": {"$gte": 4.8}}).sort({"details.rating": -1}).all()
+    highly_rated = (
+        products.find({"details.rating": {"$gte": 4.8}})
+        .sort({"details.rating": -1})
+        .all()
+    )
     print("Highly rated:", [product.name for product in highly_rated])
 
     updated = products.update(

@@ -13,9 +13,30 @@ from pydantic import ValidationError as PydanticValidationError
 from .values import get_path, validate_storable
 from ..storage import BackendView, MemoryBackend, StorageBackend
 from .document import Document, new_document_id
-from ..exceptions import ClosedDatabaseError, DuplicateKeyError, QueryError, ValidationError
-from .query import Projection, Query, SortSpec, apply_projection, apply_update, match_document, query_seed, sort_documents
-from ..contracts import Bound, ChangeSet, DocumentT, IndexLookup, IndexSpec, UpdateResult
+from ..exceptions import (
+    ClosedDatabaseError,
+    DuplicateKeyError,
+    QueryError,
+    ValidationError,
+)
+from .query import (
+    Projection,
+    Query,
+    SortSpec,
+    apply_projection,
+    apply_update,
+    match_document,
+    query_seed,
+    sort_documents,
+)
+from ..contracts import (
+    Bound,
+    ChangeSet,
+    DocumentT,
+    IndexLookup,
+    IndexSpec,
+    UpdateResult,
+)
 
 
 class Cursor(Generic[DocumentT]):
@@ -48,7 +69,9 @@ class Cursor(Generic[DocumentT]):
     def limit(self, count: int | None) -> "Cursor[DocumentT]":
         """Limit results to ``count`` documents, or clear the limit with ``None``."""
 
-        if count is not None and (not isinstance(count, int) or isinstance(count, bool) or count < 0):
+        if count is not None and (
+            not isinstance(count, int) or isinstance(count, bool) or count < 0
+        ):
             raise QueryError("limit must be a non-negative integer or None")
         self._limit = count
         return self
@@ -84,7 +107,9 @@ class Collection(Generic[DocumentT]):
     matcher, and submits atomic change sets for backend-controlled persistence.
     """
 
-    def __init__(self, model: type[DocumentT], *, backend: StorageBackend | None = None) -> None:
+    def __init__(
+        self, model: type[DocumentT], *, backend: StorageBackend | None = None
+    ) -> None:
         """Bind a document model and open the supplied or default memory backend."""
 
         if not isinstance(model, type) or not issubclass(model, Document):
@@ -110,10 +135,16 @@ class Collection(Generic[DocumentT]):
         """Validate and deep-copy one model or mapping into storage representation."""
 
         try:
-            source: object = value.model_dump(mode="python", by_alias=True) if isinstance(value, BaseModel) else dict(value)
+            source: object = (
+                value.model_dump(mode="python", by_alias=True)
+                if isinstance(value, BaseModel)
+                else dict(value)
+            )
             model = self.model.model_validate(source)
         except (PydanticValidationError, TypeError, ValueError) as error:
-            raise ValidationError(f"document does not satisfy {self.model.__name__}") from error
+            raise ValidationError(
+                f"document does not satisfy {self.model.__name__}"
+            ) from error
         document = model.model_dump(mode="python", by_alias=True)
         validate_storable(document)
         document_id = document.get("_id")
@@ -127,14 +158,18 @@ class Collection(Generic[DocumentT]):
         try:
             return self.model.model_validate(deepcopy(dict(document)))
         except PydanticValidationError as error:
-            raise ValidationError("backend document does not satisfy the collection model") from error
+            raise ValidationError(
+                "backend document does not satisfy the collection model"
+            ) from error
 
     def insert(self, document: DocumentT | Mapping[str, object]) -> DocumentT:
         """Validate and atomically insert one document."""
 
         return self.insert_many([document])[0]
 
-    def insert_many(self, documents: Iterable[DocumentT | Mapping[str, object]]) -> list[DocumentT]:
+    def insert_many(
+        self, documents: Iterable[DocumentT | Mapping[str, object]]
+    ) -> list[DocumentT]:
         """Validate and atomically insert all supplied documents."""
 
         with self._lock:
@@ -165,7 +200,11 @@ class Collection(Generic[DocumentT]):
     ) -> None:
         """Ask the backend to atomically build and persist a secondary index."""
 
-        spec = field if isinstance(field, IndexSpec) else IndexSpec(field, unique, sparse, expire_after_seconds)
+        spec = (
+            field
+            if isinstance(field, IndexSpec)
+            else IndexSpec(field, unique, sparse, expire_after_seconds)
+        )
         with self._lock:
             self._check_open()
             with self.backend.view() as view:
@@ -173,7 +212,9 @@ class Collection(Generic[DocumentT]):
                 revision = view.revision
             if existing is not None:
                 if existing != spec:
-                    raise ValidationError(f"index {spec.field!r} already exists with different options")
+                    raise ValidationError(
+                        f"index {spec.field!r} already exists with different options"
+                    )
                 return
             self.backend.commit(revision, ChangeSet(create_indexes=(spec,)))
 
@@ -190,7 +231,9 @@ class Collection(Generic[DocumentT]):
             if exists:
                 self.backend.commit(revision, ChangeSet(drop_indexes=(field,)))
 
-    def _field_candidates(self, view: BackendView, field: str, condition: object) -> set[str] | None:
+    def _field_candidates(
+        self, view: BackendView, field: str, condition: object
+    ) -> set[str] | None:
         """Translate one indexed query condition into a backend lookup request."""
 
         if field not in view.indexes:
@@ -201,10 +244,18 @@ class Collection(Generic[DocumentT]):
                 raw_values = condition["$in"]
                 if not isinstance(raw_values, (list, tuple)):
                     raise QueryError("$in requires an array")
-                if any(isinstance(value, (Mapping, list, tuple)) or hasattr(value, "search") for value in raw_values):
+                if any(
+                    isinstance(value, (Mapping, list, tuple))
+                    or hasattr(value, "search")
+                    for value in raw_values
+                ):
                     return None
                 values = tuple(raw_values)
-            bounds = {name: condition[name] for name in ("$gt", "$gte", "$lt", "$lte") if name in condition}
+            bounds = {
+                name: condition[name]
+                for name in ("$gt", "$gte", "$lt", "$lte")
+                if name in condition
+            }
             lower = None
             upper = None
             if bounds:
@@ -218,7 +269,9 @@ class Collection(Generic[DocumentT]):
                     upper = Bound(bounds["$lte"], True)
             if values is None and lower is None and upper is None:
                 return None
-            return view.lookup(field, IndexLookup(values=values, lower=lower, upper=upper))
+            return view.lookup(
+                field, IndexLookup(values=values, lower=lower, upper=upper)
+            )
         if isinstance(condition, (list, tuple)) or hasattr(condition, "search"):
             return None
         return view.lookup(field, IndexLookup.equal(condition))
@@ -262,7 +315,9 @@ class Collection(Generic[DocumentT]):
             result &= candidates
         return result
 
-    def _matching_documents(self, view: BackendView, query: Query) -> Iterator[dict[str, object]]:
+    def _matching_documents(
+        self, view: BackendView, query: Query
+    ) -> Iterator[dict[str, object]]:
         """Stream full-matcher results from indexed fetches or a backend scan."""
 
         candidates = self._candidate_ids(view, query)
@@ -272,7 +327,9 @@ class Collection(Generic[DocumentT]):
                 yield document
 
     @staticmethod
-    def _is_expired(document: Mapping[str, object], spec: IndexSpec, now: datetime) -> bool:
+    def _is_expired(
+        document: Mapping[str, object], spec: IndexSpec, now: datetime
+    ) -> bool:
         """Verify one TTL field against the current time."""
 
         value = get_path(document, spec.field)
@@ -287,14 +344,22 @@ class Collection(Generic[DocumentT]):
 
         now = datetime.now(timezone.utc)
         with self.backend.view() as view:
-            ttl_specs = [spec for spec in view.indexes.values() if spec.expire_after_seconds is not None]
+            ttl_specs = [
+                spec
+                for spec in view.indexes.values()
+                if spec.expire_after_seconds is not None
+            ]
             if not ttl_specs:
                 return 0
             candidate_ids: set[str] = set()
             for spec in ttl_specs:
                 assert spec.expire_after_seconds is not None
                 cutoff = now - timedelta(seconds=spec.expire_after_seconds)
-                candidate_ids.update(view.lookup(spec.field, IndexLookup.range(upper=Bound(cutoff, False))))
+                candidate_ids.update(
+                    view.lookup(
+                        spec.field, IndexLookup.range(upper=Bound(cutoff, False))
+                    )
+                )
             expired = {
                 str(document["_id"])
                 for document in view.fetch(candidate_ids)
@@ -312,7 +377,9 @@ class Collection(Generic[DocumentT]):
             self._check_open()
             return self._expire_stale_locked()
 
-    def find(self, query: Query | None = None, projection: Projection | None = None) -> Cursor[DocumentT]:
+    def find(
+        self, query: Query | None = None, projection: Projection | None = None
+    ) -> Cursor[DocumentT]:
         """Create a lazy cursor for a query and optional projection."""
 
         self._check_open()
@@ -321,7 +388,9 @@ class Collection(Generic[DocumentT]):
             cursor.projection(projection)
         return cursor
 
-    def find_one(self, query: Query | None = None, projection: Projection | None = None) -> DocumentT | dict[str, object] | None:
+    def find_one(
+        self, query: Query | None = None, projection: Projection | None = None
+    ) -> DocumentT | dict[str, object] | None:
         """Return the first matching model/projected mapping, or ``None``."""
 
         return self.find(query, projection).first()
@@ -335,7 +404,9 @@ class Collection(Generic[DocumentT]):
             with self.backend.view() as view:
                 return sum(1 for _ in self._matching_documents(view, query or {}))
 
-    def _iterate_cursor(self, cursor: Cursor[DocumentT]) -> Iterator[DocumentT | dict[str, object]]:
+    def _iterate_cursor(
+        self, cursor: Cursor[DocumentT]
+    ) -> Iterator[DocumentT | dict[str, object]]:
         """Stream cursor results, materializing only when explicit sorting requires it."""
 
         with self._lock:
@@ -345,7 +416,12 @@ class Collection(Generic[DocumentT]):
                 documents: Iterable[dict[str, object]]
                 if cursor._sort:
                     documents = sort_documents(
-                        [deepcopy(document) for document in self._matching_documents(view, cursor._query)],
+                        [
+                            deepcopy(document)
+                            for document in self._matching_documents(
+                                view, cursor._query
+                            )
+                        ],
                         cursor._sort,
                     )
                 else:
@@ -388,7 +464,11 @@ class Collection(Generic[DocumentT]):
                     return UpdateResult(0)
                 seed = query_seed(query)
                 seed.setdefault("_id", new_document_id())
-                candidate = apply_update(seed, update) if any(str(key).startswith("$") for key in update) else dict(update)
+                candidate = (
+                    apply_update(seed, update)
+                    if any(str(key).startswith("$") for key in update)
+                    else dict(update)
+                )
                 inserted = self._canonical(candidate)
                 self.backend.commit(revision, ChangeSet(puts=(inserted,)))
                 return UpdateResult(1, (self._model(inserted),), True)
@@ -401,7 +481,11 @@ class Collection(Generic[DocumentT]):
                     raise QueryError("cannot change a document id")
                 changed.append(canonical)
             self.backend.commit(revision, ChangeSet(puts=tuple(changed)))
-            returned = tuple(self._model(document) for document in changed) if return_updated else ()
+            returned = (
+                tuple(self._model(document) for document in changed)
+                if return_updated
+                else ()
+            )
             return UpdateResult(len(changed), returned, False)
 
     def remove(self, query: Query, *, multi: bool = False) -> int:
@@ -410,7 +494,10 @@ class Collection(Generic[DocumentT]):
         with self._lock:
             self._check_open()
             with self.backend.view() as view:
-                matched = [str(document["_id"]) for document in self._matching_documents(view, query)]
+                matched = [
+                    str(document["_id"])
+                    for document in self._matching_documents(view, query)
+                ]
                 revision = view.revision
             if not multi:
                 matched = matched[:1]

@@ -9,6 +9,7 @@ from typing import Mapping
 from ..core.values import MISSING
 from ..exceptions import BackendError, CorruptDataError
 
+
 def _json_value(value: object) -> object:
     """Encode supported values, datetimes, and the missing sentinel for JSON."""
 
@@ -44,7 +45,12 @@ def _encode_json(value: object) -> bytes:
     """Serialize one JSON-line value without a trailing newline."""
 
     try:
-        return json.dumps(_json_value(value), ensure_ascii=False, separators=(",", ":"), allow_nan=False).encode("utf-8")
+        return json.dumps(
+            _json_value(value),
+            ensure_ascii=False,
+            separators=(",", ":"),
+            allow_nan=False,
+        ).encode("utf-8")
     except (TypeError, ValueError) as error:
         raise BackendError("backend value cannot be serialized") from error
 

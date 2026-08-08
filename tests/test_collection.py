@@ -24,8 +24,16 @@ def planets() -> Collection[Planet]:
     collection = Collection(Planet)
     collection.insert_many(
         [
-            Planet(name="Mars", system="solar", order=4, satellites=["Phobos", "Deimos"]),
-            Planet(name="Earth", system="solar", order=3, inhabited=True, facts={"life": {"eyes": True}}),
+            Planet(
+                name="Mars", system="solar", order=4, satellites=["Phobos", "Deimos"]
+            ),
+            Planet(
+                name="Earth",
+                system="solar",
+                order=3,
+                inhabited=True,
+                facts={"life": {"eyes": True}},
+            ),
             Planet(name="Jupiter", system="solar", order=5),
             Planet(name="Omicron Persei 8", system="futurama", order=8, inhabited=True),
         ]
@@ -74,17 +82,35 @@ def test_application_model_can_define_its_own_id() -> None:
 
 
 def test_basic_nested_array_and_comparison_queries(planets: Collection[Planet]) -> None:
-    assert names(planets.find({"system": "solar"}).all()) == {"Mars", "Earth", "Jupiter"}
-    assert names(planets.find({"order": {"$gt": 4, "$lte": 8}}).all()) == {"Jupiter", "Omicron Persei 8"}
-    assert names(planets.find({"name": {"$in": ["Earth", "Mars"]}}).all()) == {"Earth", "Mars"}
-    assert names(planets.find({"name": {"$nin": ["Earth", "Mars"]}}).all()) == {"Jupiter", "Omicron Persei 8"}
+    assert names(planets.find({"system": "solar"}).all()) == {
+        "Mars",
+        "Earth",
+        "Jupiter",
+    }
+    assert names(planets.find({"order": {"$gt": 4, "$lte": 8}}).all()) == {
+        "Jupiter",
+        "Omicron Persei 8",
+    }
+    assert names(planets.find({"name": {"$in": ["Earth", "Mars"]}}).all()) == {
+        "Earth",
+        "Mars",
+    }
+    assert names(planets.find({"name": {"$nin": ["Earth", "Mars"]}}).all()) == {
+        "Jupiter",
+        "Omicron Persei 8",
+    }
     assert names(planets.find({"satellites": "Phobos"}).all()) == {"Mars"}
     assert names(planets.find({"satellites": ["Phobos", "Deimos"]}).all()) == {"Mars"}
     assert names(planets.find({"satellites": {"$size": 2}}).all()) == {"Mars"}
     assert names(planets.find({"facts.life.eyes": True}).all()) == {"Earth"}
     assert names(planets.find({"facts.life": {"$exists": True}}).all()) == {"Earth"}
-    assert names(planets.find({"name": re.compile("ar", re.I)}).all()) == {"Mars", "Earth"}
-    assert names(planets.find({"name": {"$regex": re.compile("^J")}}).all()) == {"Jupiter"}
+    assert names(planets.find({"name": re.compile("ar", re.I)}).all()) == {
+        "Mars",
+        "Earth",
+    }
+    assert names(planets.find({"name": {"$regex": re.compile("^J")}}).all()) == {
+        "Jupiter"
+    }
 
 
 def test_logical_elem_match_and_where_queries() -> None:
@@ -95,31 +121,60 @@ def test_logical_elem_match_and_where_queries() -> None:
     db = Collection(Survey)
     db.insert_many(
         [
-            Survey(label="good", readings=[{"kind": "temperature", "value": 22}, {"kind": "humidity", "value": 40}]),
+            Survey(
+                label="good",
+                readings=[
+                    {"kind": "temperature", "value": 22},
+                    {"kind": "humidity", "value": 40},
+                ],
+            ),
             Survey(label="bad", readings=[{"kind": "temperature", "value": 3}]),
         ]
     )
     assert db.find_one({"readings": {"$elemMatch": {"kind": "temperature", "value": {"$gt": 20}}}}).label == "good"  # type: ignore[union-attr]
-    assert {item.label for item in db.find({"$or": [{"label": "good"}, {"label": "unknown"}]}).all()} == {"good"}
-    assert {item.label for item in db.find({"$and": [{"label": {"$ne": "bad"}}, {"readings.value": {"$gte": 20}}]}).all()} == {"good"}
-    assert {item.label for item in db.find({"$not": {"label": "bad"}}).all()} == {"good"}
-    assert {item.label for item in db.find({"$where": lambda document: len(document["readings"]) > 1}).all()} == {"good"}
+    assert {
+        item.label
+        for item in db.find({"$or": [{"label": "good"}, {"label": "unknown"}]}).all()
+    } == {"good"}
+    assert {
+        item.label
+        for item in db.find(
+            {"$and": [{"label": {"$ne": "bad"}}, {"readings.value": {"$gte": 20}}]}
+        ).all()
+    } == {"good"}
+    assert {item.label for item in db.find({"$not": {"label": "bad"}}).all()} == {
+        "good"
+    }
+    assert {
+        item.label
+        for item in db.find(
+            {"$where": lambda document: len(document["readings"]) > 1}
+        ).all()
+    } == {"good"}
 
 
 def test_sort_paging_and_projection(planets: Collection[Planet]) -> None:
-    result = planets.find({"system": "solar"}).sort({"order": -1}).skip(1).limit(1).all()
+    result = (
+        planets.find({"system": "solar"}).sort({"order": -1}).skip(1).limit(1).all()
+    )
     assert names(result) == {"Mars"}
     projected = planets.find({"name": "Earth"}, {"name": 1, "_id": 0}).first()
     assert projected == {"name": "Earth"}
     excluded = planets.find({"name": "Earth"}, {"facts": 0}).first()
-    assert isinstance(excluded, dict) and "facts" not in excluded and excluded["name"] == "Earth"
+    assert (
+        isinstance(excluded, dict)
+        and "facts" not in excluded
+        and excluded["name"] == "Earth"
+    )
     id_only = planets.find({"name": "Earth"}, {"_id": 1}).first()
     assert isinstance(id_only, dict) and set(id_only) == {"_id"}
     with pytest.raises(QueryError):
         planets.find({}, {"name": 1, "system": 0}).all()
 
 
-def test_update_modifiers_replacement_upsert_and_remove(planets: Collection[Planet]) -> None:
+def test_update_modifiers_replacement_upsert_and_remove(
+    planets: Collection[Planet],
+) -> None:
     result = planets.update(
         {"name": "Mars"},
         {
@@ -132,14 +187,20 @@ def test_update_modifiers_replacement_upsert_and_remove(planets: Collection[Plan
     assert result.count == 1 and result.documents[0].order == 5
     assert result.documents[0].satellites == ["Deimos", "A", "B"]
 
-    planets.update({"name": "Mars"}, {"$addToSet": {"satellites": {"$each": ["A", "C"]}}})
+    planets.update(
+        {"name": "Mars"}, {"$addToSet": {"satellites": {"$each": ["A", "C"]}}}
+    )
     planets.update({"name": "Mars"}, {"$pull": {"satellites": re.compile("^[AB]$")}})
     planets.update({"name": "Mars"}, {"$pop": {"satellites": -1}})
     planets.update({"name": "Mars"}, {"$push": {"satellites": {"$slice": 1}}})
     mars = planets.find_one({"name": "Mars"})
     assert mars.satellites == ["C"]  # type: ignore[union-attr]
 
-    replaced = planets.update({"name": "Jupiter"}, {"name": "Jove", "system": "solar", "order": 5}, return_updated=True)
+    replaced = planets.update(
+        {"name": "Jupiter"},
+        {"name": "Jove", "system": "solar", "order": 5},
+        return_updated=True,
+    )
     assert replaced.documents[0].name == "Jove"
     upserted = planets.update(
         {"name": "Venus", "system": "solar"},
@@ -160,8 +221,12 @@ def test_ttl_cleanup() -> None:
     db.ensure_index("expires_at", expire_after_seconds=0)
     db.insert_many(
         [
-            Token(name="old", expires_at=datetime.now(timezone.utc) - timedelta(seconds=1)),
-            Token(name="new", expires_at=datetime.now(timezone.utc) + timedelta(hours=1)),
+            Token(
+                name="old", expires_at=datetime.now(timezone.utc) - timedelta(seconds=1)
+            ),
+            Token(
+                name="new", expires_at=datetime.now(timezone.utc) + timedelta(hours=1)
+            ),
             Token(name="forever"),
         ]
     )

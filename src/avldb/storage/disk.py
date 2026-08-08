@@ -13,10 +13,23 @@ from types import MappingProxyType
 from typing import Iterable, Iterator, Mapping
 
 from ..contracts import ChangeSet, IndexLookup, IndexSpec
-from ..exceptions import BackendError, CorruptDataError, DatabaseLockedError, DuplicateKeyError, WriteConflictError
+from ..exceptions import (
+    BackendError,
+    CorruptDataError,
+    DatabaseLockedError,
+    DuplicateKeyError,
+    WriteConflictError,
+)
 from ..indexing.avl import Index
-from .base import BackendView, DocumentData, StorageBackend, _copy_document, _lookup_index
+from .base import (
+    BackendView,
+    DocumentData,
+    StorageBackend,
+    _copy_document,
+    _lookup_index,
+)
 from .codec import _decode_json, _encode_json
+
 
 @dataclass(frozen=True, slots=True)
 class _Location:
@@ -147,7 +160,9 @@ class DiskBackend(StorageBackend):
                     fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
             except (OSError, BlockingIOError) as error:
                 lock_file.close()
-                raise DatabaseLockedError(f"datastore is locked: {self.path}") from error
+                raise DatabaseLockedError(
+                    f"datastore is locked: {self.path}"
+                ) from error
             self._lock_file = lock_file
         except BaseException:
             with _OPEN_PATHS_LOCK:
@@ -171,13 +186,20 @@ class DiskBackend(StorageBackend):
 
         if not isinstance(value, Mapping) or not isinstance(value.get("field"), str):
             raise CorruptDataError("invalid index specification in manifest")
-        if not isinstance(value.get("unique", False), bool) or not isinstance(value.get("sparse", False), bool):
+        if not isinstance(value.get("unique", False), bool) or not isinstance(
+            value.get("sparse", False), bool
+        ):
             raise CorruptDataError("invalid index flags in manifest")
         ttl = value.get("expire_after_seconds")
         if ttl is not None and not isinstance(ttl, (int, float)):
             raise CorruptDataError("invalid index TTL in manifest")
         try:
-            return IndexSpec(str(value["field"]), bool(value.get("unique")), bool(value.get("sparse")), ttl)
+            return IndexSpec(
+                str(value["field"]),
+                bool(value.get("unique")),
+                bool(value.get("sparse")),
+                ttl,
+            )
         except ValueError as error:
             raise CorruptDataError("invalid index specification in manifest") from error
 
@@ -195,7 +217,10 @@ class DiskBackend(StorageBackend):
             "revision": revision,
             "content_segments": list(content_segments),
             "indexes": {
-                field: {"spec": self._spec_data(spec), "segments": list(index_segments.get(field, ()))}
+                field: {
+                    "spec": self._spec_data(spec),
+                    "segments": list(index_segments.get(field, ())),
+                }
                 for field, spec in specs.items()
             },
         }
@@ -268,17 +293,25 @@ class DiskBackend(StorageBackend):
             with open(path, "rb") as stream:
                 for number, line in enumerate(stream, 1):
                     if not line.endswith(b"\n"):
-                        raise CorruptDataError(f"incomplete segment record in {relative}:{number}")
+                        raise CorruptDataError(
+                            f"incomplete segment record in {relative}:{number}"
+                        )
                     value = _decode_json(line[:-1])
                     if not isinstance(value, Mapping):
-                        raise CorruptDataError(f"non-object segment record in {relative}:{number}")
+                        raise CorruptDataError(
+                            f"non-object segment record in {relative}:{number}"
+                        )
                     yield value
         except FileNotFoundError as error:
-            raise CorruptDataError(f"manifest references missing segment: {relative}") from error
+            raise CorruptDataError(
+                f"manifest references missing segment: {relative}"
+            ) from error
         except OSError as error:
             raise BackendError(f"failed to read segment: {relative}") from error
 
-    def _write_lines(self, relative: str, values: Iterable[Mapping[str, object]]) -> None:
+    def _write_lines(
+        self, relative: str, values: Iterable[Mapping[str, object]]
+    ) -> None:
         """Create and fsync one immutable JSON-lines segment."""
 
         path = self._segment_path(relative)
@@ -291,7 +324,9 @@ class DiskBackend(StorageBackend):
                 stream.flush()
                 os.fsync(stream.fileno())
         except OSError as error:
-            raise BackendError(f"failed to write immutable segment: {relative}") from error
+            raise BackendError(
+                f"failed to write immutable segment: {relative}"
+            ) from error
 
     @staticmethod
     def _index_directory(field: str) -> str:
@@ -316,11 +351,17 @@ class DiskBackend(StorageBackend):
         content_segments = tuple(raw_content_segments)
         content_segment_set = set(content_segments)
         for field, raw in raw_indexes.items():
-            if not isinstance(field, str) or not isinstance(raw, Mapping) or not isinstance(raw.get("segments"), list):
+            if (
+                not isinstance(field, str)
+                or not isinstance(raw, Mapping)
+                or not isinstance(raw.get("segments"), list)
+            ):
                 raise CorruptDataError("invalid index entry in manifest")
             spec = self._parse_spec(raw.get("spec"))
             if field != spec.field:
-                raise CorruptDataError("manifest index field does not match its specification")
+                raise CorruptDataError(
+                    "manifest index field does not match its specification"
+                )
             if not all(isinstance(item, str) for item in raw["segments"]):
                 raise CorruptDataError("index segment names must be strings")
             segments = tuple(raw["segments"])
@@ -340,15 +381,27 @@ class DiskBackend(StorageBackend):
                         if field == "_id":
                             raw_location = operation.get("location")
                             if not isinstance(raw_location, Mapping):
-                                raise CorruptDataError("primary index entry lacks a record location")
+                                raise CorruptDataError(
+                                    "primary index entry lacks a record location"
+                                )
                             try:
                                 location = _Location(
-                                    str(raw_location["segment"]), int(raw_location["offset"]), int(raw_location["length"])
+                                    str(raw_location["segment"]),
+                                    int(raw_location["offset"]),
+                                    int(raw_location["length"]),
                                 )
                             except (KeyError, TypeError, ValueError) as error:
-                                raise CorruptDataError("invalid primary index location") from error
-                            if location.segment not in content_segment_set or location.offset < 0 or location.length <= 0:
-                                raise CorruptDataError("primary index location is outside committed content")
+                                raise CorruptDataError(
+                                    "invalid primary index location"
+                                ) from error
+                            if (
+                                location.segment not in content_segment_set
+                                or location.offset < 0
+                                or location.length <= 0
+                            ):
+                                raise CorruptDataError(
+                                    "primary index location is outside committed content"
+                                )
                             locations[document_id] = location
                     else:
                         raise CorruptDataError("unknown persisted index operation")
@@ -359,7 +412,9 @@ class DiskBackend(StorageBackend):
             raise CorruptDataError("manifest lacks the mandatory unique _id index")
         for segment in content_segments:
             if not self._segment_path(segment).is_file():
-                raise CorruptDataError(f"manifest references missing content segment: {segment}")
+                raise CorruptDataError(
+                    f"manifest references missing content segment: {segment}"
+                )
         return _DiskState(
             int(manifest["revision"]),
             content_segments,
@@ -378,7 +433,9 @@ class DiskBackend(StorageBackend):
             if self._opened:
                 return
             if self.path.exists() and not self.path.is_dir():
-                raise BackendError("DiskBackend now requires a directory; legacy single-file stores are unsupported")
+                raise BackendError(
+                    "DiskBackend now requires a directory; legacy single-file stores are unsupported"
+                )
             self.path.mkdir(parents=True, exist_ok=True)
             (self.path / "content").mkdir(exist_ok=True)
             (self.path / "indexes").mkdir(exist_ok=True)
@@ -386,7 +443,9 @@ class DiskBackend(StorageBackend):
             try:
                 if not self.manifest_path.exists():
                     spec = IndexSpec("_id", unique=True)
-                    self._atomic_manifest(self._manifest_data(0, (), {"_id": spec}, {"_id": ()}))
+                    self._atomic_manifest(
+                        self._manifest_data(0, (), {"_id": spec}, {"_id": ()})
+                    )
                 self._state = self._load_state(self._read_manifest())
                 self._opened = True
                 self._cleanup_obsolete()
@@ -399,7 +458,9 @@ class DiskBackend(StorageBackend):
 
         with self._lock:
             state = self._check_open()
-            self._active_views[state.revision] = self._active_views.get(state.revision, 0) + 1
+            self._active_views[state.revision] = (
+                self._active_views.get(state.revision, 0) + 1
+            )
             return _DiskView(self, state)
 
     def _release_view(self, revision: int) -> None:
@@ -414,7 +475,9 @@ class DiskBackend(StorageBackend):
             if not self._active_views and self._opened and not self._closed:
                 self._cleanup_obsolete()
 
-    def _read_location(self, state: _DiskState, document_id: str) -> DocumentData | None:
+    def _read_location(
+        self, state: _DiskState, document_id: str
+    ) -> DocumentData | None:
         """Read and validate one document from its primary-index byte location."""
 
         location = state.locations.get(document_id)
@@ -428,14 +491,20 @@ class DiskBackend(StorageBackend):
         except OSError as error:
             raise BackendError(f"failed to fetch document {document_id!r}") from error
         value = _decode_json(raw)
-        if not isinstance(value, Mapping) or value.get("op") != "put" or not isinstance(value.get("document"), Mapping):
+        if (
+            not isinstance(value, Mapping)
+            or value.get("op") != "put"
+            or not isinstance(value.get("document"), Mapping)
+        ):
             raise CorruptDataError("primary index points to an invalid content record")
         document = _copy_document(value["document"])
         if document.get("_id") != document_id:
             raise CorruptDataError("primary index points to a different document")
         return document
 
-    def _fetch_state(self, state: _DiskState, document_ids: Iterable[str]) -> Iterator[DocumentData]:
+    def _fetch_state(
+        self, state: _DiskState, document_ids: Iterable[str]
+    ) -> Iterator[DocumentData]:
         """Fetch selected IDs from a captured disk state."""
 
         for document_id in document_ids:
@@ -443,10 +512,14 @@ class DiskBackend(StorageBackend):
             if document is not None:
                 yield document
 
-    def _final_documents(self, state: _DiskState, changes: ChangeSet) -> Iterator[DocumentData]:
+    def _final_documents(
+        self, state: _DiskState, changes: ChangeSet
+    ) -> Iterator[DocumentData]:
         """Stream post-change documents when building a newly requested index."""
 
-        replaced = set(changes.deletes) | {str(document["_id"]) for document in changes.puts}
+        replaced = set(changes.deletes) | {
+            str(document["_id"]) for document in changes.puts
+        }
         for document in self._fetch_state(state, state.locations):
             if str(document["_id"]) not in replaced:
                 yield document
@@ -467,12 +540,16 @@ class DiskBackend(StorageBackend):
         try:
             with open(path, "xb") as stream:
                 for document_id in changes.deletes:
-                    stream.write(_encode_json({"op": "delete", "id": document_id}) + b"\n")
+                    stream.write(
+                        _encode_json({"op": "delete", "id": document_id}) + b"\n"
+                    )
                 for document in changes.puts:
                     payload = _encode_json({"op": "put", "document": document})
                     offset = stream.tell()
                     stream.write(payload + b"\n")
-                    locations[str(document["_id"])] = _Location(relative, offset, len(payload))
+                    locations[str(document["_id"])] = _Location(
+                        relative, offset, len(payload)
+                    )
                 stream.flush()
                 os.fsync(stream.fileno())
         except OSError as error:
@@ -494,7 +571,9 @@ class DiskBackend(StorageBackend):
                     payload = _encode_json({"op": "put", "document": document})
                     offset = stream.tell()
                     stream.write(payload + b"\n")
-                    locations[str(document["_id"])] = _Location(relative, offset, len(payload))
+                    locations[str(document["_id"])] = _Location(
+                        relative, offset, len(payload)
+                    )
                 stream.flush()
                 os.fsync(stream.fileno())
         except OSError as error:
@@ -505,7 +584,11 @@ class DiskBackend(StorageBackend):
     def _location_data(location: _Location) -> dict[str, object]:
         """Convert a primary-index location to persisted JSON data."""
 
-        return {"segment": location.segment, "offset": location.offset, "length": location.length}
+        return {
+            "segment": location.segment,
+            "offset": location.offset,
+            "length": location.length,
+        }
 
     def _index_delta(
         self,
@@ -524,9 +607,15 @@ class DiskBackend(StorageBackend):
         for document in puts:
             document_id = str(document["_id"])
             for value in index.values(document):
-                operation: dict[str, object] = {"op": "add", "value": value, "id": document_id}
+                operation: dict[str, object] = {
+                    "op": "add",
+                    "value": value,
+                    "id": document_id,
+                }
                 if field == "_id":
-                    operation["location"] = self._location_data(new_locations[document_id])
+                    operation["location"] = self._location_data(
+                        new_locations[document_id]
+                    )
                 operations.append(operation)
         return operations
 
@@ -538,7 +627,11 @@ class DiskBackend(StorageBackend):
         records: list[dict[str, object]] = []
         for value, document_ids in index.entries():
             for document_id in document_ids:
-                operation: dict[str, object] = {"op": "add", "value": value, "id": document_id}
+                operation: dict[str, object] = {
+                    "op": "add",
+                    "value": value,
+                    "id": document_id,
+                }
                 if field == "_id":
                     operation["location"] = self._location_data(locations[document_id])
                 records.append(operation)
@@ -553,7 +646,10 @@ class DiskBackend(StorageBackend):
                 raise WriteConflictError("disk backend revision changed")
             if changes.empty:
                 return base_revision
-            if any(not isinstance(document.get("_id"), str) or not document.get("_id") for document in changes.puts):
+            if any(
+                not isinstance(document.get("_id"), str) or not document.get("_id")
+                for document in changes.puts
+            ):
                 raise BackendError("stored documents require a non-empty string _id")
             put_ids = [str(document["_id"]) for document in changes.puts]
             if len(set(put_ids)) != len(put_ids):
@@ -568,7 +664,10 @@ class DiskBackend(StorageBackend):
             }
             specs = dict(state.specs)
             indexes = {field: index.clone() for field, index in state.indexes.items()}
-            index_segments = {field: list(segments) for field, segments in state.index_segments.items()}
+            index_segments = {
+                field: list(segments)
+                for field, segments in state.index_segments.items()
+            }
             for field in changes.drop_indexes:
                 if field == "_id":
                     raise BackendError("the _id index cannot be removed")
@@ -579,7 +678,9 @@ class DiskBackend(StorageBackend):
             for spec in changes.create_indexes:
                 existing = specs.get(spec.field)
                 if existing is not None and existing != spec:
-                    raise BackendError(f"index already exists with different options: {spec.field!r}")
+                    raise BackendError(
+                        f"index already exists with different options: {spec.field!r}"
+                    )
                 if existing is None:
                     specs[spec.field] = spec
                     created_fields.add(spec.field)
@@ -592,12 +693,16 @@ class DiskBackend(StorageBackend):
 
             if created_fields:
                 for field in created_fields:
-                    indexes[field] = Index.build(specs[field], self._final_documents(state, changes))
+                    indexes[field] = Index.build(
+                        specs[field], self._final_documents(state, changes)
+                    )
                     index_segments[field] = []
 
             revision = state.revision + 1
             token = uuid.uuid4().hex
-            content_segment, new_locations = self._write_content_segment(revision, token, changes)
+            content_segment, new_locations = self._write_content_segment(
+                revision, token, changes
+            )
             locations = dict(state.locations)
             for document_id in affected_ids:
                 locations.pop(document_id, None)
@@ -610,20 +715,28 @@ class DiskBackend(StorageBackend):
                 if field in created_fields:
                     operations = self._full_index_records(field, index, locations)
                 elif changes.puts or changes.deletes:
-                    operations = self._index_delta(field, index, old_documents, changes.puts, new_locations)
+                    operations = self._index_delta(
+                        field, index, old_documents, changes.puts, new_locations
+                    )
                 else:
                     operations = []
                 if operations:
-                    relative = f"{self._index_directory(field)}/{revision:020d}-{token}.jsonl"
+                    relative = (
+                        f"{self._index_directory(field)}/{revision:020d}-{token}.jsonl"
+                    )
                     self._write_lines(relative, operations)
                     index_segments.setdefault(field, []).append(relative)
 
-            manifest = self._manifest_data(revision, content_segments, specs, index_segments)
+            manifest = self._manifest_data(
+                revision, content_segments, specs, index_segments
+            )
             self._atomic_manifest(manifest)
             self._state = _DiskState(
                 revision,
                 tuple(content_segments),
-                MappingProxyType({field: tuple(items) for field, items in index_segments.items()}),
+                MappingProxyType(
+                    {field: tuple(items) for field, items in index_segments.items()}
+                ),
                 MappingProxyType(specs),
                 MappingProxyType(indexes),
                 MappingProxyType(locations),
@@ -645,11 +758,17 @@ class DiskBackend(StorageBackend):
             index_segments: dict[str, tuple[str, ...]] = {}
             for field, index in state.indexes.items():
                 records = self._full_index_records(field, index, locations)
-                relative = f"{self._index_directory(field)}/{revision:020d}-{token}.jsonl"
+                relative = (
+                    f"{self._index_directory(field)}/{revision:020d}-{token}.jsonl"
+                )
                 self._write_lines(relative, records)
                 index_segments[field] = (relative,)
             content_segments = (content_segment,)
-            self._atomic_manifest(self._manifest_data(revision, content_segments, state.specs, index_segments))
+            self._atomic_manifest(
+                self._manifest_data(
+                    revision, content_segments, state.specs, index_segments
+                )
+            )
             self._state = _DiskState(
                 revision,
                 content_segments,

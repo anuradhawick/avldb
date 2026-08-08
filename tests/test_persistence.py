@@ -55,7 +55,9 @@ def backend(request: pytest.FixtureRequest, tmp_path: Path) -> Iterator[StorageB
         value.close()
 
 
-def test_backend_conformance_lookup_fetch_scan_conflict_and_compaction(backend: StorageBackend) -> None:
+def test_backend_conformance_lookup_fetch_scan_conflict_and_compaction(
+    backend: StorageBackend,
+) -> None:
     with backend.view() as initial:
         assert initial.revision == "0"
         assert initial.indexes == {"_id": IndexSpec("_id", unique=True)}
@@ -64,13 +66,25 @@ def test_backend_conformance_lookup_fetch_scan_conflict_and_compaction(backend: 
 
     revision = backend.commit(
         revision,
-        ChangeSet(puts=(raw("a", "alpha", 1), raw("b", "beta", 5), raw("c", "gamma", 9))),
+        ChangeSet(
+            puts=(raw("a", "alpha", 1), raw("b", "beta", 5), raw("c", "gamma", 9))
+        ),
     )
-    revision = backend.commit(revision, ChangeSet(create_indexes=(IndexSpec("priority"), IndexSpec("title", unique=True))))
+    revision = backend.commit(
+        revision,
+        ChangeSet(
+            create_indexes=(IndexSpec("priority"), IndexSpec("title", unique=True))
+        ),
+    )
     with backend.view() as view:
-        assert view.lookup("priority", IndexLookup.range(lower=Bound(5), upper=Bound(9, False))) == {"b"}
+        assert view.lookup(
+            "priority", IndexLookup.range(lower=Bound(5), upper=Bound(9, False))
+        ) == {"b"}
         assert view.lookup("title", IndexLookup.equal("alpha")) == {"a"}
-        assert [document["_id"] for document in view.fetch(["c", "a", "missing"])] == ["c", "a"]
+        assert [document["_id"] for document in view.fetch(["c", "a", "missing"])] == [
+            "c",
+            "a",
+        ]
         assert {document["_id"] for document in view.scan()} == {"a", "b", "c"}
         stale_revision = view.revision
 
@@ -111,22 +125,36 @@ def test_disk_reopen_uses_separate_content_and_index_files(tmp_path: Path) -> No
     assert manifest["format"] == 2
     assert set(manifest["indexes"]) == {"_id", "priority"}
     assert list((path / "content").glob("*.jsonl"))
-    index_directories = [directory for directory in (path / "indexes").iterdir() if directory.is_dir()]
+    index_directories = [
+        directory for directory in (path / "indexes").iterdir() if directory.is_dir()
+    ]
     assert len(index_directories) == 2
     assert all(list(directory.glob("*.jsonl")) for directory in index_directories)
 
     with Collection(Note, backend=DiskBackend(path)) as reopened:
-        assert [note.title for note in reopened.find({"priority": {"$gte": 2}}).sort({"priority": 1}).all()] == ["b", "a"]
+        assert [
+            note.title
+            for note in reopened.find({"priority": {"$gte": 2}})
+            .sort({"priority": 1})
+            .all()
+        ] == ["b", "a"]
         with reopened.backend.view() as view:
             assert "priority" in view.indexes
 
 
-def test_disk_persists_multikey_nested_sparse_indexes_and_index_removal(tmp_path: Path) -> None:
+def test_disk_persists_multikey_nested_sparse_indexes_and_index_removal(
+    tmp_path: Path,
+) -> None:
     path = tmp_path / "index-kinds.avldb"
     with Collection(FlexibleRecord, backend=DiskBackend(path)) as db:
         db.insert_many(
             [
-                {"name": "one", "code": "A", "tags": ["red", "round"], "metadata": {"rank": 3}},
+                {
+                    "name": "one",
+                    "code": "A",
+                    "tags": ["red", "round"],
+                    "metadata": {"rank": 3},
+                },
                 {"name": "two", "tags": ["blue"], "metadata": {"rank": 1}},
                 {"name": "three", "tags": ["red"], "metadata": {"rank": 2}},
             ]
@@ -136,8 +164,13 @@ def test_disk_persists_multikey_nested_sparse_indexes_and_index_removal(tmp_path
         db.ensure_index("metadata.rank")
 
     with Collection(FlexibleRecord, backend=DiskBackend(path)) as reopened:
-        assert {item.name for item in reopened.find({"tags": "red"}).all()} == {"one", "three"}
-        assert [item.name for item in reopened.find({"metadata.rank": {"$lt": 2}}).all()] == ["two"]
+        assert {item.name for item in reopened.find({"tags": "red"}).all()} == {
+            "one",
+            "three",
+        }
+        assert [
+            item.name for item in reopened.find({"metadata.rank": {"$lt": 2}}).all()
+        ] == ["two"]
         assert [item.name for item in reopened.find({"code": "A"}).all()] == ["one"]
         reopened.remove_index("tags")
 
@@ -146,7 +179,10 @@ def test_disk_persists_multikey_nested_sparse_indexes_and_index_removal(tmp_path
             assert "tags" not in view.indexes
         # Removing an index affects planning, not query semantics; scan fallback
         # must still produce the same documents.
-        assert {item.name for item in reopened.find({"tags": "red"}).all()} == {"one", "three"}
+        assert {item.name for item in reopened.find({"tags": "red"}).all()} == {
+            "one",
+            "three",
+        }
 
 
 class CountingDiskBackend(DiskBackend):
@@ -159,16 +195,22 @@ class CountingDiskBackend(DiskBackend):
         return super()._read_location(state, document_id)  # type: ignore[arg-type]
 
 
-def test_disk_open_loads_indexes_not_documents_and_indexed_query_fetches_candidates(tmp_path: Path) -> None:
+def test_disk_open_loads_indexes_not_documents_and_indexed_query_fetches_candidates(
+    tmp_path: Path,
+) -> None:
     path = tmp_path / "lazy.avldb"
     with Collection(Note, backend=DiskBackend(path)) as db:
-        db.insert_many(Note(title=f"note-{value}", priority=value) for value in range(100))
+        db.insert_many(
+            Note(title=f"note-{value}", priority=value) for value in range(100)
+        )
         db.ensure_index("priority")
 
     backend = CountingDiskBackend(path)
     with Collection(Note, backend=backend) as db:
         assert backend.document_reads == 0
-        result = db.find({"priority": {"$gte": 40, "$lt": 43}}).sort({"priority": 1}).all()
+        result = (
+            db.find({"priority": {"$gte": 40, "$lt": 43}}).sort({"priority": 1}).all()
+        )
         assert [note.priority for note in result] == [40, 41, 42]
         assert backend.document_reads == 3
         backend.document_reads = 0
@@ -201,7 +243,9 @@ def test_disk_orphan_segments_are_ignored_and_cleaned_on_open(tmp_path: Path) ->
     assert not orphan.exists()
 
 
-def test_disk_compaction_preserves_active_views_then_cleans_old_segments(tmp_path: Path) -> None:
+def test_disk_compaction_preserves_active_views_then_cleans_old_segments(
+    tmp_path: Path,
+) -> None:
     path = tmp_path / "views.avldb"
     backend = DiskBackend(path)
     backend.open()
@@ -231,7 +275,9 @@ class FailingPublishDiskBackend(DiskBackend):
         super()._atomic_manifest(data)  # type: ignore[arg-type]
 
 
-def test_failed_manifest_publication_keeps_content_and_indexes_invisible(tmp_path: Path) -> None:
+def test_failed_manifest_publication_keeps_content_and_indexes_invisible(
+    tmp_path: Path,
+) -> None:
     path = tmp_path / "atomic.avldb"
     backend = FailingPublishDiskBackend(path)
     db = Collection(Note, backend=backend)

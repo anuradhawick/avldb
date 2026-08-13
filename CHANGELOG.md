@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.1.2
 
 - Add the explicit `$eq` query operator alongside direct equality matches.
 

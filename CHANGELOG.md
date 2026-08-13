@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Add the explicit `$eq` query operator alongside direct equality matches.
+
 ## 0.1.1
 
 - Organize collection, indexing, and storage code into focused subpackages

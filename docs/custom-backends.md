@@ -210,9 +210,10 @@ class MyView(BackendView):
     def close(self) -> None: ...
 ```
 
-`Collection` calls `lookup()` for safe indexed equality, `$in`, and range
-conditions. It then calls `fetch()` for those candidate IDs and applies the
-complete query matcher. When no suitable index exists, it calls `scan()`.
+`Collection` calls `lookup()` for safe indexed direct equality, `$eq`, `$in`,
+and range conditions. It then calls `fetch()` for those candidate IDs and
+applies the complete query matcher. When no suitable index exists, it calls
+`scan()`.
 
 The `_id` index must always be present and unique. Secondary index definitions
 appear only after their creation commit succeeds.
@@ -409,7 +410,7 @@ prepared from revision `4` must fail instead of overwriting newer data.
 `IndexLookup` represents exact values, an ordered range, or both:
 
 ```python
-lookup.values       # equality or $in values
+lookup.values       # direct equality, $eq, or $in values
 lookup.lower.value
 lookup.lower.inclusive
 lookup.upper.value

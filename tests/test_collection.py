@@ -87,6 +87,11 @@ def test_basic_nested_array_and_comparison_queries(planets: Collection[Planet]) 
         "Earth",
         "Jupiter",
     }
+    assert names(planets.find({"system": {"$eq": "solar"}}).all()) == {
+        "Mars",
+        "Earth",
+        "Jupiter",
+    }
     assert names(planets.find({"order": {"$gt": 4, "$lte": 8}}).all()) == {
         "Jupiter",
         "Omicron Persei 8",
@@ -100,7 +105,11 @@ def test_basic_nested_array_and_comparison_queries(planets: Collection[Planet]) 
         "Omicron Persei 8",
     }
     assert names(planets.find({"satellites": "Phobos"}).all()) == {"Mars"}
+    assert names(planets.find({"satellites": {"$eq": "Phobos"}}).all()) == {"Mars"}
     assert names(planets.find({"satellites": ["Phobos", "Deimos"]}).all()) == {"Mars"}
+    assert names(planets.find({"satellites": {"$eq": ["Phobos", "Deimos"]}}).all()) == {
+        "Mars"
+    }
     assert names(planets.find({"satellites": {"$size": 2}}).all()) == {"Mars"}
     assert names(planets.find({"facts.life.eyes": True}).all()) == {"Earth"}
     assert names(planets.find({"facts.life": {"$exists": True}}).all()) == {"Earth"}

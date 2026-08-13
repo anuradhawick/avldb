@@ -60,9 +60,10 @@ dictionaries because partial data may not satisfy the complete model schema.
 
 Queries support:
 
-- Equality and deep equality.
+- Equality and deep equality through direct values or the explicit `$eq` operator.
 - Nested dot paths and arrays of subdocuments.
-- `$lt`, `$lte`, `$gt`, `$gte`, `$in`, `$nin`, `$ne`, `$exists`, and `$regex`.
+- `$eq`, `$lt`, `$lte`, `$gt`, `$gte`, `$in`, `$nin`, `$ne`, `$exists`, and
+  `$regex`.
 - `$size` and `$elemMatch` for arrays.
 - `$or`, `$and`, `$not`, and callable `$where` expressions.
 - Inclusion/exclusion projection, multi-field sorting, skip, and limit.
@@ -87,6 +88,7 @@ For an indexed range such as:
 
 ```python
 users.find({"age": {"$gte": 18, "$lt": 65}})
+users.find({"age": {"$eq": 36}})  # equivalent to {"age": 36}
 ```
 
 the planner performs:

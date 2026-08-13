@@ -31,6 +31,7 @@ def test_sparse_multikey_nested_and_intersected_indexes() -> None:
     assert [
         item.score for item in db.find({"group": "a", "score": {"$gte": 3}}).all()
     ] == [5]
+    assert [item.score for item in db.find({"score": {"$eq": 5}}).all()] == [5]
     assert {item.score for item in db.find({"flags": "red"}).all()} == {1, 8}
     assert [item.score for item in db.find({"nested.rank": {"$lt": 2}}).all()] == [8]
     assert {

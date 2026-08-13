@@ -74,6 +74,8 @@ def _match_operator(value: object, operator: str, operand: object) -> bool:
     and element-match expressions, raising ``QueryError`` for invalid operands.
     """
 
+    if operator == "$eq":
+        return values_equal(value, operand)
     if operator in {"$lt", "$lte", "$gt", "$gte"}:
         return _compare(value, operand, operator)
     if operator == "$ne":
@@ -129,7 +131,9 @@ def _match_field(value: object, condition: object) -> bool:
 
     if _is_operator_expression(condition):
         assert isinstance(condition, Mapping)
-        array_specific = any(op in condition for op in ("$size", "$elemMatch"))
+        array_specific = any(op in condition for op in ("$size", "$elemMatch")) or (
+            "$eq" in condition and isinstance(condition["$eq"], (list, tuple))
+        )
         if isinstance(value, (list, tuple)) and not array_specific:
             # Negative operators must hold for the array as a whole; positive
             # operators match when any element satisfies the expression.

@@ -240,7 +240,14 @@ class Collection(Generic[DocumentT]):
             return None
         if isinstance(condition, Mapping):
             values: tuple[object, ...] | None = None
-            if "$in" in condition:
+            if "$eq" in condition:
+                raw_value = condition["$eq"]
+                if not (
+                    isinstance(raw_value, (Mapping, list, tuple))
+                    or hasattr(raw_value, "search")
+                ):
+                    values = (raw_value,)
+            elif "$in" in condition:
                 raw_values = condition["$in"]
                 if not isinstance(raw_values, (list, tuple)):
                     raise QueryError("$in requires an array")

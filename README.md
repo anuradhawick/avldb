@@ -1,8 +1,10 @@
 # AVL-DB
 
 [![PyPI](https://img.shields.io/pypi/v/avldb.svg)](https://pypi.org/project/avldb/)
+[![PyPI downloads](https://static.pepy.tech/badge/avldb)](https://pepy.tech/project/avldb)
 [![Python versions](https://img.shields.io/pypi/pyversions/avldb.svg)](https://pypi.org/project/avldb/)
 [![CI](https://github.com/anuradhawick/avldb/actions/workflows/ci.yml/badge.svg)](https://github.com/anuradhawick/avldb/actions/workflows/ci.yml)
+[![Publish](https://github.com/anuradhawick/avldb/actions/workflows/publish.yml/badge.svg)](https://github.com/anuradhawick/avldb/actions/workflows/publish.yml)
 [![License](https://img.shields.io/pypi/l/avldb.svg?color=green)](https://github.com/anuradhawick/avldb/blob/main/LICENSE)
 
 `avldb` is a synchronous embedded document database for typed Pydantic models.

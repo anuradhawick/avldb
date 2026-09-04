@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import pickle
 from dataclasses import dataclass, field
 from typing import Iterable, Mapping
 
@@ -145,9 +146,9 @@ class Index:
         """Create an independent tree containing the same value buckets."""
 
         index = Index(self.spec)
-        for value, document_ids in self.entries():
-            for document_id in document_ids:
-                index.add_value(value, document_id)
+        index._tree = pickle.loads(
+            pickle.dumps(self._tree, protocol=pickle.HIGHEST_PROTOCOL)
+        )
         return index
 
     @classmethod

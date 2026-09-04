@@ -22,7 +22,7 @@ classifiers = [
 ]
 dependencies = [
   "pydantic>=2,<3",
-  "rs-avl>=0.1.1,<0.2",
+  "rs-avl>=0.1.2,<0.2",
 ]
 
 [dependency-groups]
